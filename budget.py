@@ -31,6 +31,14 @@ def import_from_manual_csv(file, db: DBHandler):
             db.create_transaction(date, account_id, payee_id, category_id, amount, notes, cleared)
         else:
             raise ValueError("Account '" + account_name + "' has not yet been declared with an initial balance")
+    return 0
+
+def list_categories(db: DBHandler):
+    data = db.list_categories()
+    if data:
+        data = [c[0] for c in data if c[0] != ""]
+        return '\n'.join(data)
+    return None
 
 def get_balances(db: DBHandler, only_cleared=True):
     accounts = db.list_accounts()
@@ -49,6 +57,14 @@ def get_balances(db: DBHandler, only_cleared=True):
             balances += account_name + ": " + currency_symbol + str(balance)
     return balances
 
+def create_db(db_file: str):
+    if os.path.exists(db_file):
+        print("Budget file '" + db_file + "' already exists. Exiting.")
+        return
+    db = DBHandler(db_file)
+    db.initialize_database()
+    print("New budget database created: " + db_file)
+
 if __name__ == "__main__":
 
     argParser = argparse.ArgumentParser()
@@ -56,6 +72,7 @@ if __name__ == "__main__":
 
     argParser.add_argument("-f", "--db-file", help="Database file to use (default 'budget.db')")
     argParser.add_argument("-i", "--import", help="Import a CSV file", dest="csv_file")
+    argParser.add_argument("-lc", "--list-categories", help="List spending categories", action='store_true')
     argParser.add_argument("-n", "--new-db", help="Initialise a new database", action="store_true")
     argParser.add_argument("-u", "--uncleared", help="Include uncleared transactions when calculating account balances", action="store_true")
 
@@ -72,18 +89,22 @@ if __name__ == "__main__":
         sys.exit(1)
     
     if args.new_db:
-        if os.path.exists(db_file):
-            print("Budget file '" + db_file + "' already exists. Exiting.")
-            sys.exit(0)
+        create_db(db_file)
+        sys.exit(0)
+    
+    if args.list_categories:
         db = DBHandler(db_file)
-        db.initialize_database()
-        print("New budget database created: " + db_file)
+        print(list_categories(db))
         sys.exit(0)
 
     if args.csv_file:
+        status = 1
         db = DBHandler(db_file)
         if os.path.exists(args.csv_file):
-            import_from_manual_csv(args.csv_file, db)
+            status = import_from_manual_csv(args.csv_file, db)
+        else:
+            print("File '" + args.csv_file + "' not found")
+        sys.exit(status)
     
     db = DBHandler(db_file)
     print(get_balances(db, not args.uncleared))

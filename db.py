@@ -110,7 +110,14 @@ class DBHandler:
         return transaction_id
     
     def list_accounts(self):
-        self.cur.execute("SELECT id, account_name FROM accounts")
+        self.cur.execute("SELECT id, account_name FROM accounts ORDER BY account_name ASC")
+        data = self.cur.fetchall()
+        if len(data) == 0:
+            return None
+        return data
+
+    def list_categories(self):
+        self.cur.execute("SELECT category_name FROM categories ORDER BY category_name ASC")
         data = self.cur.fetchall()
         if len(data) == 0:
             return None
